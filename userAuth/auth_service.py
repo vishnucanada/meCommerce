@@ -21,11 +21,12 @@ doesn't change.
 """
 import hashlib
 import os
+import re
 import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field, field_validator
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -34,13 +35,26 @@ _users: dict[str, dict] = {}
 
 PBKDF2_ROUNDS = 100_000
 
+# Good-enough email shape for a mock. Kept as a plain regex so this service has
+# no optional dependencies (avoids the `pydantic[email]` / email-validator
+# extra). Use pydantic.EmailStr if you want stricter RFC validation later.
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
 
 class NewUser(BaseModel):
     """Validated registration payload. Pydantic rejects bad input with a 422
     before add_user() ever runs, so the handler only sees clean data."""
     name: str = Field(min_length=1, max_length=80)
-    email: EmailStr
+    email: str = Field(min_length=3, max_length=254)
     password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def valid_email(cls, v: str) -> str:
+        v = v.strip().lower()
+        if not _EMAIL_RE.match(v):
+            raise ValueError("value is not a valid email address")
+        return v
 
 
 class PublicUser(BaseModel):
@@ -66,7 +80,7 @@ def _email_taken(email: str) -> bool:
 @router.post("", response_model=PublicUser, status_code=201)
 def add_user(payload: NewUser):
     """Create a user. This is the 'add user' entry point."""
-    email = payload.email.lower()
+    email = payload.email  # already normalized (lowercased/trimmed) by the validator
     if _email_taken(email):
         raise HTTPException(status_code=409, detail="An account with this email already exists.")
 

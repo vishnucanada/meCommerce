@@ -9,7 +9,7 @@ Cache tier for real use.
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from .data import PRODUCTS_BY_ID
+from database import db
 
 router = APIRouter(prefix="/api/cart", tags=["cart"])
 
@@ -30,7 +30,7 @@ def _render(cart_id: str) -> dict:
     items = _carts.get(cart_id, {})
     lines, subtotal = [], 0
     for pid, qty in items.items():
-        product = PRODUCTS_BY_ID.get(pid)
+        product = db.get_product(pid)
         if not product or qty <= 0:
             continue
         line_total = product["price"] * qty
@@ -55,7 +55,7 @@ def get_cart(cart_id: str):
 @router.post("/{cart_id}/items")
 def add_item(cart_id: str, item: CartItemIn):
     """Add (or, with a negative qty, decrement) a product in the cart."""
-    if item.product_id not in PRODUCTS_BY_ID:
+    if db.get_product(item.product_id) is None:
         raise HTTPException(status_code=404, detail="Product not found")
     cart = _carts.setdefault(cart_id, {})
     cart[item.product_id] = cart.get(item.product_id, 0) + item.qty
