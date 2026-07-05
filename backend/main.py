@@ -14,6 +14,7 @@ into independent services behind the API Gateway later is a deployment change,
 not a code rewrite — the routes stay identical.
 """
 import pathlib
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,9 +22,20 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.cart_service import router as cart_router
 from backend.product_service import router as products_router
+from database import db
+from userAuth import auth_service
 from userAuth.auth_service import router as users_router
 
-app = FastAPI(title="meCommerce API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Create the SQLite databases and seed them with mock data before serving.
+    db.init_databases()            # products.db (+ catalog), users.db schema
+    auth_service.seed_mock_users()  # mock accounts in users.db
+    yield
+
+
+app = FastAPI(title="meCommerce API", version="0.1.0", lifespan=lifespan)
 
 # CORS lets you host the frontend on a different origin (e.g. python -m http.server)
 # and still call this API. Tighten allow_origins for production.

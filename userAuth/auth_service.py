@@ -1,67 +1,55 @@
 """AuthN Service — user registration (the "add user" design).
 
-Maps to the "User Auth / AuthN" box in mock-diagram.png. This is the piece you
-were building in Python: it owns creating users and would own login/tokens next.
+Maps to the "User Auth / AuthN" box in mock-diagram.png. Owns creating users
+and would own login/tokens next.
 
-How it embeds with the rest of the backend
--------------------------------------------
-- It exposes a router (`POST /api/users`) that `backend/main.py` mounts behind
-  the same API, exactly like the Product and Cart services. In a fuller build
-  this would be its own deployable service behind the API Gateway.
-- The frontend's "Create account" modal POSTs {name, email, password} here.
-- Passwords are hashed before storage; the plaintext never leaves this module,
-  and the API never returns the hash (see PublicUser).
+Design decisions per the current spec:
+  * Credentials are username + password (no email).
+  * All usernames and all passwords are accepted — no format/length rules.
+    The only constraint is that a username must be unique (enforced by the
+    UNIQUE column in users.db), so re-using one returns 409.
+  * Users are persisted in users.db via the database layer. The plaintext
+    password never leaves this module; only a salted hash is stored, and the
+    API never returns it.
 
-Where YOUR add-user logic goes
--------------------------------
-Replace the in-memory `_users` dict with the SQL "Users and Orders" database
-from the diagram, and drop your own validation / hashing / persistence into
-`add_user()`. The request/response contract stays the same, so the frontend
+Where YOUR add-user logic goes: drop your own persistence / hashing into
+add_user(). The request/response contract stays the same, so the frontend
 doesn't change.
 """
 import hashlib
 import os
-import re
+import sqlite3
 import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel
+
+from database import db
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
-# In-memory user store for the mock. Swap for the SQL database (id -> row).
-_users: dict[str, dict] = {}
-
 PBKDF2_ROUNDS = 100_000
 
-# Good-enough email shape for a mock. Kept as a plain regex so this service has
-# no optional dependencies (avoids the `pydantic[email]` / email-validator
-# extra). Use pydantic.EmailStr if you want stricter RFC validation later.
-_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+# Mock users seeded into users.db on startup (plaintext here only to seed the
+# hash; stored hashed). Handy for demoing login later.
+MOCK_USERS = [
+    {"username": "aiko", "password": "matcha123"},
+    {"username": "kenji", "password": "hojicha"},
+    {"username": "admin", "password": "admin"},
+]
 
 
 class NewUser(BaseModel):
-    """Validated registration payload. Pydantic rejects bad input with a 422
-    before add_user() ever runs, so the handler only sees clean data."""
-    name: str = Field(min_length=1, max_length=80)
-    email: str = Field(min_length=3, max_length=254)
-    password: str = Field(min_length=8, max_length=128)
-
-    @field_validator("email")
-    @classmethod
-    def valid_email(cls, v: str) -> str:
-        v = v.strip().lower()
-        if not _EMAIL_RE.match(v):
-            raise ValueError("value is not a valid email address")
-        return v
+    """Registration payload. Plain strings — every value is accepted."""
+    username: str
+    password: str
 
 
 class PublicUser(BaseModel):
-    """What we send back — note there is no password/hash field."""
+    """What we send back — no password/hash field."""
     id: str
-    name: str
-    email: str
+    username: str
     created_at: str
 
 
@@ -73,30 +61,41 @@ def hash_password(password: str, salt: bytes | None = None) -> str:
     return f"{salt.hex()}:{digest.hex()}"
 
 
-def _email_taken(email: str) -> bool:
-    return any(u["email"] == email for u in _users.values())
+def _create_user(username: str, password: str) -> dict:
+    """Build a user row and insert it. The 'add user' core."""
+    user = {
+        "id": uuid.uuid4().hex,
+        "username": username,
+        "password_hash": hash_password(password),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    db.insert_user(user)  # <-- persistence lives in the database layer
+    return user
+
+
+def seed_mock_users() -> None:
+    """Populate users.db with mock accounts if it's empty (idempotent)."""
+    if db.count_users() > 0:
+        return
+    for entry in MOCK_USERS:
+        try:
+            _create_user(entry["username"], entry["password"])
+        except sqlite3.IntegrityError:
+            pass  # already there
 
 
 @router.post("", response_model=PublicUser, status_code=201)
 def add_user(payload: NewUser):
     """Create a user. This is the 'add user' entry point."""
-    email = payload.email  # already normalized (lowercased/trimmed) by the validator
-    if _email_taken(email):
-        raise HTTPException(status_code=409, detail="An account with this email already exists.")
-
-    user = {
-        "id": uuid.uuid4().hex,
-        "name": payload.name.strip(),
-        "email": email,
-        "password_hash": hash_password(payload.password),
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
-    _users[user["id"]] = user  # <-- replace with an INSERT into the users table
+    try:
+        user = _create_user(payload.username, payload.password)
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=409, detail="That username is already taken.")
     return PublicUser(**user)
 
 
 @router.get("", response_model=list[PublicUser])
 def list_users():
-    """Demo/debug endpoint so you can see created users. Remove or protect
-    this once real auth is in place."""
-    return [PublicUser(**u) for u in _users.values()]
+    """Demo/debug endpoint so you can see stored users. Remove or protect this
+    once real auth is in place."""
+    return [PublicUser(**u) for u in db.list_users()]

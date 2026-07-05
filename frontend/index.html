@@ -477,16 +477,12 @@
     <p class="lede">Save your favourite harvests and check out faster.</p>
     <form id="authForm" novalidate>
       <div class="field">
-        <label for="f-name">Full name</label>
-        <input id="f-name" name="name" type="text" autocomplete="name" required>
+        <label for="f-user">Username</label>
+        <input id="f-user" name="username" type="text" autocomplete="username" required>
       </div>
       <div class="field">
-        <label for="f-email">Email</label>
-        <input id="f-email" name="email" type="email" autocomplete="email" required>
-      </div>
-      <div class="field">
-        <label for="f-pass">Password (8+ characters)</label>
-        <input id="f-pass" name="password" type="password" autocomplete="new-password" minlength="8" required>
+        <label for="f-pass">Password</label>
+        <input id="f-pass" name="password" type="password" autocomplete="new-password" required>
       </div>
       <p class="form-msg" id="authMsg" role="status" aria-live="polite"></p>
       <button type="submit" class="checkout" id="authSubmit">Create account</button>
@@ -677,7 +673,7 @@
   function openAuth() {
     authMsg.textContent = ''; authMsg.className = 'form-msg';
     authModal.classList.add('open'); authModal.setAttribute('aria-hidden', 'false');
-    document.getElementById('f-name').focus();
+    document.getElementById('f-user').focus();
   }
   function closeAuth() {
     authModal.classList.remove('open'); authModal.setAttribute('aria-hidden', 'true');
@@ -691,14 +687,13 @@
     authMsg.textContent = ''; authMsg.className = 'form-msg';
     authSubmit.disabled = true; authSubmit.textContent = 'Creating…';
     const payload = {
-      name: document.getElementById('f-name').value.trim(),
-      email: document.getElementById('f-email').value.trim(),
+      username: document.getElementById('f-user').value,
       password: document.getElementById('f-pass').value,
     };
     try {
       const user = await api('/api/users', { method: 'POST', body: JSON.stringify(payload) });
       authMsg.className = 'form-msg ok';
-      authMsg.textContent = `Welcome, ${user.name.split(' ')[0]}! Your account is ready.`;
+      authMsg.textContent = `Welcome, ${user.username}! Your account is ready.`;
       authForm.reset();
       setTimeout(closeAuth, 1400);
     } catch (err) {
