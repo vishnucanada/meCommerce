@@ -15,6 +15,7 @@
       --accent: #5F7D2F;
       --accent-ink: #F4F7EC;
       --accent-soft: #E4ECD1;
+      --danger: #B23B2E;
       --shadow: 20px 40px -28px rgba(31, 38, 23, 0.35);
       --radius: 14px;
     }
@@ -29,20 +30,21 @@
         --accent: #A7C766;
         --accent-ink: #12160B;
         --accent-soft: #26301A;
+        --danger: #E98A7B;
         --shadow: 20px 40px -28px rgba(0, 0, 0, 0.6);
       }
     }
     :root[data-theme="light"] {
       --paper: #F1F4E9; --paper-2: #E7ECD8; --card: #FAFCF3; --ink: #1F2617;
       --ink-2: #55603F; --line: #DBE3C7; --accent: #5F7D2F; --accent-ink: #F4F7EC;
-      --accent-soft: #E4ECD1; --shadow: 20px 40px -28px rgba(31, 38, 23, 0.35);
+      --accent-soft: #E4ECD1; --danger: #B23B2E; --shadow: 20px 40px -28px rgba(31, 38, 23, 0.35);
     }
     :root[data-theme="dark"] {
       --paper: #13170D; --paper-2: #1A1F11; --card: #1E2413; --ink: #EAF0DC;
       --ink-2: #9EAE7E; --line: #313A22; --accent: #A7C766; --accent-ink: #12160B;
-      --accent-soft: #26301A; --shadow: 20px 40px -28px rgba(0, 0, 0, 0.6);
+      --accent-soft: #26301A; --danger: #E98A7B; --shadow: 20px 40px -28px rgba(0, 0, 0, 0.6);
     }
-  
+
     * { box-sizing: border-box; }
     html { -webkit-text-size-adjust: 100%; }
     body {
@@ -58,7 +60,7 @@
     img { max-width: 100%; }
     a { color: inherit; }
     button { font: inherit; cursor: pointer; }
-  
+
     /* ---------- Header ---------- */
     header {
       position: sticky; top: 0; z-index: 30;
@@ -108,7 +110,19 @@
       align-items: center; justify-content: center; line-height: 1;
     }
     .cart-count.show { display: flex; }
-  
+
+    /* ---------- API error banner ---------- */
+    .api-error {
+      max-width: 1160px; margin: 16px auto 0; padding: 12px 16px;
+      background: color-mix(in srgb, var(--danger) 12%, var(--paper));
+      border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--line));
+      color: var(--ink); border-radius: 10px; font-size: 0.88rem;
+    }
+    .api-error code {
+      font-family: ui-monospace, Menlo, monospace; background: var(--paper-2);
+      padding: 1px 6px; border-radius: 5px;
+    }
+
     /* ---------- Hero ---------- */
     .wrap { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
     .hero {
@@ -138,10 +152,10 @@
     .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 22px -12px var(--accent); }
     .btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
     .btn.ghost:hover { border-color: var(--ink-2); box-shadow: none; }
-  
+
     .hero-visual { display: flex; justify-content: center; }
     .hero-visual .bag-figure { width: min(300px, 80%); }
-  
+
     /* ---------- Matcha pouch graphic ---------- */
     .bag {
       position: relative; width: 100%; aspect-ratio: 3 / 4; border-radius: 8px;
@@ -181,7 +195,7 @@
       margin-top: auto; font-size: 0.58rem; letter-spacing: 0.16em;
       text-transform: uppercase; opacity: 0.6;
     }
-  
+
     /* ---------- Section head ---------- */
     .sec-head {
       display: flex; align-items: flex-end; justify-content: space-between;
@@ -199,12 +213,13 @@
     }
     .chip:hover { color: var(--ink); border-color: var(--ink-2); }
     .chip.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-  
+
     /* ---------- Product grid ---------- */
     .grid {
       display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px;
       padding-bottom: 64px;
     }
+    .grid .placeholder { color: var(--ink-2); padding: 30px 0; grid-column: 1 / -1; }
     .card {
       background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
       padding: 16px; display: flex; flex-direction: column;
@@ -230,7 +245,7 @@
     }
     .card .add:hover { background: var(--accent); color: var(--accent-ink); }
     .card .add.added { background: var(--accent); color: var(--accent-ink); }
-  
+
     /* ---------- Footer ---------- */
     footer { border-top: 1px solid var(--line); background: var(--paper-2); }
     .foot {
@@ -239,8 +254,8 @@
       color: var(--ink-2); font-size: 0.85rem;
     }
     .foot .mark { font-family: Georgia, serif; font-size: 1.15rem; color: var(--ink); }
-  
-    /* ---------- Cart drawer ---------- */
+
+    /* ---------- Overlays (cart drawer + auth modal) ---------- */
     .scrim {
       position: fixed; inset: 0; background: rgba(14,18,8,0.5); z-index: 40;
       opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
@@ -291,8 +306,37 @@
       padding: 14px; border-radius: 10px; font-weight: 700; font-size: 0.95rem;
     }
     .checkout:hover { filter: brightness(1.05); }
+    .checkout:disabled { opacity: 0.6; cursor: default; }
     .drawer-foot small { display: block; text-align: center; color: var(--ink-2); margin-top: 10px; font-size: 0.74rem; }
-  
+
+    /* ---------- Auth modal ---------- */
+    .modal {
+      position: fixed; inset: 0; z-index: 60; display: grid; place-items: center;
+      padding: 20px; background: rgba(14,18,8,0.5);
+      opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+    }
+    .modal.open { opacity: 1; pointer-events: auto; }
+    .modal-card {
+      background: var(--paper); border: 1px solid var(--line); border-radius: 16px;
+      width: min(430px, 100%); padding: 28px; box-shadow: var(--shadow);
+      transform: translateY(10px); transition: transform 0.2s ease;
+    }
+    .modal.open .modal-card { transform: none; }
+    .modal-card h3 { font-family: Georgia, serif; font-weight: 400; font-size: 1.5rem; margin: 0 0 4px; }
+    .modal-card .lede { color: var(--ink-2); font-size: 0.88rem; margin: 0 0 20px; }
+    .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .field label { font-size: 0.76rem; letter-spacing: 0.02em; color: var(--ink-2); }
+    .field input {
+      padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px;
+      background: var(--card); color: var(--ink); font: inherit;
+    }
+    .field input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+    .form-msg { font-size: 0.82rem; min-height: 1.1em; margin: 2px 0 12px; }
+    .form-msg.error { color: var(--danger); }
+    .form-msg.ok { color: var(--accent); font-weight: 600; }
+    .modal-foot { text-align: center; font-size: 0.8rem; color: var(--ink-2); margin-top: 14px; }
+    .modal-foot a { color: var(--accent); text-decoration: none; font-weight: 600; }
+
     @media (max-width: 860px) {
       nav.links { display: none; }
       .hero { grid-template-columns: 1fr; gap: 30px; padding: 40px 0; }
@@ -310,7 +354,6 @@
   </style>
 </head>
 <body>
-
 <header>
   <div class="bar">
     <a class="brand" href="#">
@@ -327,6 +370,9 @@
       <button class="icon-btn" id="themeBtn" aria-label="Toggle theme" title="Toggle light / dark">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
       </button>
+      <button class="icon-btn" id="accountBtn" aria-label="Create account" title="Create account">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>
+      </button>
       <button class="icon-btn" id="cartBtn" aria-label="Open cart">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h2l1.6 10.4a1.5 1.5 0 0 0 1.5 1.3h7.6a1.5 1.5 0 0 0 1.5-1.2L21 8H7"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>
         <span class="cart-count" id="cartCount">0</span>
@@ -334,6 +380,11 @@
     </div>
   </div>
 </header>
+
+<div class="api-error" id="apiError" hidden>
+  Can't reach the API. Start the backend from the repo root with
+  <code>uvicorn backend.main:app --reload</code>, then reload this page.
+</div>
 
 <main class="wrap">
   <section class="hero">
@@ -375,7 +426,9 @@
         <button class="chip" data-filter="culinary">Culinary</button>
       </div>
     </div>
-    <div class="grid" id="grid"></div>
+    <div class="grid" id="grid">
+      <p class="placeholder">Loading matcha…</p>
+    </div>
   </section>
 </main>
 
@@ -398,6 +451,7 @@
   </div>
 </footer>
 
+<!-- Cart drawer -->
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-label="Shopping cart">
   <div class="drawer-head">
@@ -416,21 +470,71 @@
   </div>
 </aside>
 
+<!-- Auth modal (registration -> POST /api/users) -->
+<div class="modal" id="authModal" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <h3 class="serif" id="authTitle">Create your account</h3>
+    <p class="lede">Save your favourite harvests and check out faster.</p>
+    <form id="authForm" novalidate>
+      <div class="field">
+        <label for="f-name">Full name</label>
+        <input id="f-name" name="name" type="text" autocomplete="name" required>
+      </div>
+      <div class="field">
+        <label for="f-email">Email</label>
+        <input id="f-email" name="email" type="email" autocomplete="email" required>
+      </div>
+      <div class="field">
+        <label for="f-pass">Password (8+ characters)</label>
+        <input id="f-pass" name="password" type="password" autocomplete="new-password" minlength="8" required>
+      </div>
+      <p class="form-msg" id="authMsg" role="status" aria-live="polite"></p>
+      <button type="submit" class="checkout" id="authSubmit">Create account</button>
+    </form>
+    <p class="modal-foot">Already have an account? <a href="#" id="authClose">Close</a></p>
+  </div>
+</div>
+
 <script>
-  const products = [
-    { id:'uji', name:'Uji Ceremonial', region:'Kyoto · Uji', grade:'ceremonial', gradeLabel:'Ceremonial', price:32, notes:'Sweet, deep umami, no bitterness', label:'#eaf0d6', dot:'#4b6b1f' },
-    { id:'okumidori', name:'Okumidori Reserve', region:'Kyoto · Wazuka', grade:'ceremonial', gradeLabel:'Ceremonial', price:38, notes:'Creamy, floral, vivid green', label:'#e2ecd0', dot:'#3d5c18' },
-    { id:'yame', name:'Yame Premium', region:'Fukuoka · Yame', grade:'premium', gradeLabel:'Premium', price:26, notes:'Balanced, nutty, smooth finish', label:'#edf1dd', dot:'#6a8a30' },
-    { id:'nishio', name:'Nishio Daily', region:'Aichi · Nishio', grade:'premium', gradeLabel:'Premium', price:22, notes:'Bright, grassy, everyday cup', label:'#eef2df', dot:'#7a9a3e' },
-    { id:'culinary', name:'Culinary Blend', region:'Kagoshima', grade:'culinary', gradeLabel:'Culinary', price:18, notes:'Bold, for lattes and baking', label:'#e6ecd4', dot:'#556b28' },
-    { id:'barista', name:'Barista Latte', region:'Uji blend', grade:'culinary', gradeLabel:'Culinary', price:20, notes:'Rich, froths well, latte-ready', label:'#e9efd8', dot:'#607d2c' },
-  ];
+  // ---- Config -------------------------------------------------------------
+  // Frontend is presentation only. All data comes from the backend REST API.
+  // Empty base = same origin (FastAPI serves this page and the /api routes).
+  // Point this at your API Gateway URL if you host the frontend separately.
+  const API_BASE = '';
 
-  const cart = {}; // id -> qty
-  const grid = document.getElementById('grid');
-  const money = n => '$' + n.toFixed(2);
+  // A cart id identifies this browser's cart to the Cart Service.
+  let CART_ID = localStorage.getItem('cartId');
+  if (!CART_ID) {
+    CART_ID = (crypto.randomUUID ? crypto.randomUUID() : 'c-' + Date.now());
+    localStorage.setItem('cartId', CART_ID);
+  }
 
-  function bagHTML(p){
+  let products = [];
+  let currentFilter = 'all';
+  const money = n => '$' + Number(n).toFixed(2);
+
+  // ---- Tiny fetch helper --------------------------------------------------
+  async function api(path, opts = {}) {
+    const res = await fetch(API_BASE + path, {
+      headers: { 'Content-Type': 'application/json' },
+      ...opts,
+    });
+    if (!res.ok) {
+      let detail = res.statusText;
+      try {
+        const body = await res.json();
+        if (Array.isArray(body.detail)) detail = body.detail[0]?.msg || detail;
+        else if (body.detail) detail = body.detail;
+      } catch (_) {}
+      const err = new Error(detail);
+      err.status = res.status;
+      throw err;
+    }
+    return res.status === 204 ? null : res.json();
+  }
+
+  // ---- Products (Product Service) ----------------------------------------
+  function bagHTML(p) {
     return `<div class="bag" style="--label:${p.label};--grade:${p.dot}">
       <div class="label">
         <div class="origin-dot"></div>
@@ -440,12 +544,15 @@
       </div></div>`;
   }
 
-  function renderGrid(filter='all'){
-    grid.innerHTML = '';
-    products.filter(p => filter==='all' || p.grade===filter).forEach(p => {
-      const card = document.createElement('article');
-      card.className = 'card';
-      card.innerHTML = `
+  function renderGrid() {
+    const grid = document.getElementById('grid');
+    const shown = products.filter(p => currentFilter === 'all' || p.grade === currentFilter);
+    if (!shown.length) {
+      grid.innerHTML = '<p class="placeholder">No matcha in this grade yet.</p>';
+      return;
+    }
+    grid.innerHTML = shown.map(p => `
+      <article class="card">
         <div class="bag-figure">${bagHTML(p)}</div>
         <div class="meta"><h3 class="serif">${p.name}</h3><span class="price mono">${money(p.price)}</span></div>
         <div class="tags"><span class="tag grade">${p.gradeLabel}</span><span class="tag">${p.region.split(' · ')[0]}</span></div>
@@ -453,103 +560,163 @@
         <button class="add" data-id="${p.id}">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
           Add to cart
-        </button>`;
-      grid.appendChild(card);
-    });
+        </button>
+      </article>`).join('');
   }
-  renderGrid();
 
-  // Filters
+  async function loadProducts() {
+    try {
+      products = await api('/api/products');
+      document.getElementById('apiError').hidden = true;
+      renderGrid();
+    } catch (e) {
+      document.getElementById('apiError').hidden = false;
+      document.getElementById('grid').innerHTML =
+        '<p class="placeholder">Couldn\'t load products — is the backend running?</p>';
+    }
+  }
+
   document.getElementById('filters').addEventListener('click', e => {
-    const btn = e.target.closest('.chip'); if(!btn) return;
+    const btn = e.target.closest('.chip'); if (!btn) return;
     document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
     btn.classList.add('active');
-    renderGrid(btn.dataset.filter);
+    currentFilter = btn.dataset.filter;
+    renderGrid();
   });
 
-  // Add to cart (event delegation)
-  grid.addEventListener('click', e => {
-    const btn = e.target.closest('.add'); if(!btn) return;
+  // ---- Cart (Cart Service) -----------------------------------------------
+  document.getElementById('grid').addEventListener('click', async e => {
+    const btn = e.target.closest('.add'); if (!btn) return;
     const id = btn.dataset.id;
-    cart[id] = (cart[id]||0) + 1;
-    btn.classList.add('added');
-    btn.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg> Added';
-    setTimeout(() => {
-      btn.classList.remove('added');
-      btn.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Add to cart';
-    }, 1100);
-    updateCart();
+    try {
+      const state = await api(`/api/cart/${CART_ID}/items`, {
+        method: 'POST', body: JSON.stringify({ product_id: id, qty: 1 }),
+      });
+      renderCart(state);
+      btn.classList.add('added');
+      btn.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg> Added';
+      setTimeout(() => {
+        btn.classList.remove('added');
+        btn.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Add to cart';
+      }, 1100);
+    } catch (e) { document.getElementById('apiError').hidden = false; }
   });
 
-  const drawer = document.getElementById('drawer');
-  const scrim = document.getElementById('scrim');
-  function openCart(){ drawer.classList.add('open'); scrim.classList.add('open'); }
-  function closeCart(){ drawer.classList.remove('open'); scrim.classList.remove('open'); }
-  document.getElementById('cartBtn').addEventListener('click', openCart);
-  document.getElementById('closeCart').addEventListener('click', closeCart);
-  scrim.addEventListener('click', closeCart);
-  document.addEventListener('keydown', e => { if(e.key==='Escape') closeCart(); });
-
-  function updateCart(){
-    const ids = Object.keys(cart).filter(id => cart[id] > 0);
-    const count = ids.reduce((s,id) => s + cart[id], 0);
+  function renderCart(state) {
+    const count = state.items.reduce((s, i) => s + i.qty, 0);
     const badge = document.getElementById('cartCount');
     badge.textContent = count;
     badge.classList.toggle('show', count > 0);
 
     const body = document.getElementById('drawerBody');
     const foot = document.getElementById('drawerFoot');
-    if(ids.length === 0){
+    if (!state.items.length) {
       body.innerHTML = '<div class="empty">Your cart is empty.<br>Pick a matcha to get started.</div>';
       foot.style.display = 'none';
       return;
     }
-    let subtotal = 0;
-    body.innerHTML = ids.map(id => {
-      const p = products.find(x => x.id===id);
-      const qty = cart[id];
-      subtotal += p.price * qty;
-      return `<div class="line-item">
-        <div class="thumb" style="--li-label:${p.label}"></div>
+    body.innerHTML = state.items.map(i => `
+      <div class="line-item">
+        <div class="thumb" style="--li-label:${i.label}"></div>
         <div class="li-main">
-          <div class="li-name serif">${p.name}</div>
-          <div class="li-sub">${p.region} · ${p.gradeLabel}</div>
-          <div class="qty" data-id="${id}">
+          <div class="li-name serif">${i.name}</div>
+          <div class="li-sub">${i.region} · ${i.gradeLabel}</div>
+          <div class="qty" data-id="${i.id}">
             <button data-act="dec" aria-label="Decrease">–</button>
-            <span class="mono">${qty}</span>
+            <span class="mono">${i.qty}</span>
             <button data-act="inc" aria-label="Increase">+</button>
           </div>
         </div>
         <div class="li-right">
-          <span class="li-price mono">${money(p.price*qty)}</span>
-          <button class="li-remove" data-remove="${id}">Remove</button>
+          <span class="li-price mono">${money(i.line_total)}</span>
+          <button class="li-remove" data-remove="${i.id}">Remove</button>
         </div>
-      </div>`;
-    }).join('');
+      </div>`).join('');
     foot.style.display = 'block';
-    const shipping = subtotal >= 40 ? 0 : 5;
-    document.getElementById('subtotal').textContent = money(subtotal);
-    document.getElementById('shipping').innerHTML = shipping === 0
-      ? '<span style="color:var(--accent);font-weight:600">Free</span>' : money(shipping);
-    document.getElementById('total').textContent = money(subtotal + shipping);
+    document.getElementById('subtotal').textContent = money(state.subtotal);
+    document.getElementById('shipping').innerHTML = state.shipping === 0
+      ? '<span style="color:var(--accent);font-weight:600">Free</span>' : money(state.shipping);
+    document.getElementById('total').textContent = money(state.total);
   }
 
-  // Drawer qty + remove
-  document.getElementById('drawerBody').addEventListener('click', e => {
+  async function loadCart() {
+    try { renderCart(await api(`/api/cart/${CART_ID}`)); } catch (_) {}
+  }
+
+  document.getElementById('drawerBody').addEventListener('click', async e => {
     const q = e.target.closest('[data-act]');
     const rm = e.target.closest('[data-remove]');
-    if(q){
-      const id = q.parentElement.dataset.id;
-      cart[id] += q.dataset.act === 'inc' ? 1 : -1;
-      if(cart[id] < 1) delete cart[id];
-      updateCart();
-    } else if(rm){
-      delete cart[rm.dataset.remove];
-      updateCart();
+    try {
+      if (q) {
+        const id = q.parentElement.dataset.id;
+        const delta = q.dataset.act === 'inc' ? 1 : -1;
+        renderCart(await api(`/api/cart/${CART_ID}/items`, {
+          method: 'POST', body: JSON.stringify({ product_id: id, qty: delta }),
+        }));
+      } else if (rm) {
+        renderCart(await api(`/api/cart/${CART_ID}/items/${rm.dataset.remove}`, { method: 'DELETE' }));
+      }
+    } catch (_) {}
+  });
+
+  // ---- Cart drawer open/close --------------------------------------------
+  const drawer = document.getElementById('drawer');
+  const scrim = document.getElementById('scrim');
+  const openCart = () => { drawer.classList.add('open'); scrim.classList.add('open'); };
+  const closeCart = () => { drawer.classList.remove('open'); scrim.classList.remove('open'); };
+  document.getElementById('cartBtn').addEventListener('click', openCart);
+  document.getElementById('closeCart').addEventListener('click', closeCart);
+  scrim.addEventListener('click', closeCart);
+
+  // ---- Auth modal (AuthN service: POST /api/users) -----------------------
+  const authModal = document.getElementById('authModal');
+  const authForm = document.getElementById('authForm');
+  const authMsg = document.getElementById('authMsg');
+  const authSubmit = document.getElementById('authSubmit');
+
+  function openAuth() {
+    authMsg.textContent = ''; authMsg.className = 'form-msg';
+    authModal.classList.add('open'); authModal.setAttribute('aria-hidden', 'false');
+    document.getElementById('f-name').focus();
+  }
+  function closeAuth() {
+    authModal.classList.remove('open'); authModal.setAttribute('aria-hidden', 'true');
+  }
+  document.getElementById('accountBtn').addEventListener('click', openAuth);
+  document.getElementById('authClose').addEventListener('click', e => { e.preventDefault(); closeAuth(); });
+  authModal.addEventListener('click', e => { if (e.target === authModal) closeAuth(); });
+
+  authForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    authMsg.textContent = ''; authMsg.className = 'form-msg';
+    authSubmit.disabled = true; authSubmit.textContent = 'Creating…';
+    const payload = {
+      name: document.getElementById('f-name').value.trim(),
+      email: document.getElementById('f-email').value.trim(),
+      password: document.getElementById('f-pass').value,
+    };
+    try {
+      const user = await api('/api/users', { method: 'POST', body: JSON.stringify(payload) });
+      authMsg.className = 'form-msg ok';
+      authMsg.textContent = `Welcome, ${user.name.split(' ')[0]}! Your account is ready.`;
+      authForm.reset();
+      setTimeout(closeAuth, 1400);
+    } catch (err) {
+      authMsg.className = 'form-msg error';
+      authMsg.textContent = err.message || 'Something went wrong. Please try again.';
+    } finally {
+      authSubmit.disabled = false; authSubmit.textContent = 'Create account';
     }
   });
 
-  // Theme toggle
+  // Escape closes whichever overlay is open
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (authModal.classList.contains('open')) closeAuth();
+    else closeCart();
+  });
+
+  // ---- Theme toggle -------------------------------------------------------
   const root = document.documentElement;
   document.getElementById('themeBtn').addEventListener('click', () => {
     const current = root.getAttribute('data-theme')
@@ -557,7 +724,9 @@
     root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
   });
 
-  updateCart();
+  // ---- Boot ---------------------------------------------------------------
+  loadProducts();
+  loadCart();
 </script>
 </body>
 </html>
