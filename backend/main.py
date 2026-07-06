@@ -22,6 +22,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.cart_service import router as cart_router
 from backend.product_service import router as products_router
+from backend.recommendation_service import router as recommendations_router
 from database import db
 from userAuth import auth_service
 from userAuth.auth_service import router as users_router
@@ -47,9 +48,10 @@ app.add_middleware(
 )
 
 # --- REST services -------------------------------------------------------
-app.include_router(products_router)   # Product Service
-app.include_router(cart_router)       # Cart Service
-app.include_router(users_router)      # AuthN Service (add user)
+app.include_router(products_router)         # Product Service
+app.include_router(cart_router)             # Cart Service
+app.include_router(users_router)            # AuthN Service (add user)
+app.include_router(recommendations_router)  # Recommendation Service
 
 
 @app.get("/api/health")
