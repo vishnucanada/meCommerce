@@ -13,6 +13,7 @@ A fresh connection is opened per call. That's the simplest thing that is safe
 across FastAPI's threadpool (SQLite connections aren't shareable between
 threads) and is perfectly fine at mock scale.
 """
+import json
 import pathlib
 import sqlite3
 
@@ -90,6 +91,20 @@ def init_databases() -> None:
                    created_at    TEXT NOT NULL
                )"""
         )
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS orders (
+                   id         TEXT PRIMARY KEY,
+                   cart_id    TEXT NOT NULL,
+                   username   TEXT,
+                   items      TEXT NOT NULL,
+                   subtotal   INTEGER NOT NULL,
+                   shipping   INTEGER NOT NULL,
+                   total      INTEGER NOT NULL,
+                   payment_id TEXT NOT NULL,
+                   status     TEXT NOT NULL,
+                   created_at TEXT NOT NULL
+               )"""
+        )
         conn.commit()
     finally:
         conn.close()
@@ -163,5 +178,51 @@ def list_users() -> list[dict]:
             "SELECT id, username, created_at FROM users ORDER BY created_at"
         ).fetchall()
         return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+# --- Orders --------------------------------------------------------------
+# Line items are stored as a JSON blob so the SQL store can hold a whole order
+# in one row; services deal in dicts/lists and never see the serialization.
+def _order_from_row(row: sqlite3.Row) -> dict:
+    order = dict(row)
+    order["items"] = json.loads(order["items"])
+    return order
+
+
+def insert_order(order: dict) -> None:
+    row = {**order, "items": json.dumps(order["items"])}
+    conn = _connect(USERS_DB)
+    try:
+        conn.execute(
+            """INSERT INTO orders
+               (id, cart_id, username, items, subtotal, shipping, total,
+                payment_id, status, created_at)
+               VALUES (:id, :cart_id, :username, :items, :subtotal, :shipping,
+                       :total, :payment_id, :status, :created_at)""",
+            row,
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_order(order_id: str) -> dict | None:
+    conn = _connect(USERS_DB)
+    try:
+        row = conn.execute(
+            "SELECT * FROM orders WHERE id = ?", (order_id,)
+        ).fetchone()
+        return _order_from_row(row) if row else None
+    finally:
+        conn.close()
+
+
+def list_orders() -> list[dict]:
+    conn = _connect(USERS_DB)
+    try:
+        rows = conn.execute("SELECT * FROM orders ORDER BY created_at").fetchall()
+        return [_order_from_row(r) for r in rows]
     finally:
         conn.close()
