@@ -1,50 +1,52 @@
-import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+"""Recommendation Service — content-based "similar teas" for the catalog.
 
-# 1. Sample Data: Movie catalog with genres
-movies = pd.DataFrame([
-    {"movie_id": 1, "title": "The Matrix", "genres": "Sci-Fi Action Cyberpunk"},
-    {"movie_id": 2, "title": "John Wick", "genres": "Action Thriller Gun-Fu"},
-    {"movie_id": 3, "title": "Interstellar", "genres": "Sci-Fi Space Drama"},
-    {"movie_id": 4, "title": "Toy Story", "genres": "Animation Children Comedy"},
-    {"movie_id": 5, "title": "Blade Runner 2049", "genres": "Sci-Fi Action Dystopian"}
-])
+Maps to the "Recommendation" box in mock-diagram.png. Given a product, it ranks
+the rest of the matcha catalog by content similarity (grade + tasting notes) and
+returns the closest matches. Reads the catalog through the database layer so it
+stays in sync with the Product Service — no separate copy of the data.
 
-# 2. Vectorize the text data using TF-IDF
-tfidf = TfidfVectorizer(stop_words='english')
-tfidf_matrix = tfidf.fit_transform(movies['genres'])
+Pure-Python cosine over a bag of words; no ML dependencies needed at mock scale.
+Swap in the diagram's ML Model later without changing the caller — the
+`recommend()` contract stays the same.
+"""
+import math
+import re
+from collections import Counter
 
-# 3. Compute the Cosine Similarity Matrix
-cosine_sim = cosine_similarity(tfidf_matrix, tfidf_matrix)
+from database import db
 
-# 4. Recommendation function based on a movie title
-def get_recommendations(movie_title, cosine_sim_matrix, df, top_n=2):
-    # Get the index of the movie that matches the title
-    try:
-        idx = df[df['title'] == movie_title].index[0]
-    except IndexError:
-        return f"Movie '{movie_title}' not found in the catalog."
-    
-    # Get similarity scores of all movies with this movie
-    sim_scores = list(enumerate(cosine_sim_matrix[idx]))
-    
-    # Sort the movies based on the similarity scores (highest first)
-    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-    
-    # Get the scores of the top_n most similar movies (skip the first one since it's the movie itself)
-    sim_scores = sim_scores[1:top_n+1]
-    
-    # Get the movie indices
-    movie_indices = [i[0] for i in sim_scores]
-    
-    # Return the top N most similar movies
-    return df['title'].iloc[movie_indices].tolist()
+_TOKEN = re.compile(r"[a-z]+")
 
-# 5. Test the recommendation model
-target_movie = "The Matrix"
-recommendations = get_recommendations(target_movie, cosine_sim, movies, top_n=2)
 
-print(f"Because you watched '{target_movie}', you might like:")
-for movie in recommendations:
-    print(f"- {movie}")
+def _tokens(product: dict) -> Counter:
+    """Bag of words for a product. Grade is weighted (repeated) so matches stay
+    within the same tier (ceremonial recommends ceremonial, etc.)."""
+    text = f"{product['grade']} {product['grade']} {product['notes']}"
+    return Counter(_TOKEN.findall(text.lower()))
+
+
+def _cosine(a: Counter, b: Counter) -> float:
+    shared = set(a) & set(b)
+    dot = sum(a[t] * b[t] for t in shared)
+    if not dot:
+        return 0.0
+    norm_a = math.sqrt(sum(v * v for v in a.values()))
+    norm_b = math.sqrt(sum(v * v for v in b.values()))
+    return dot / (norm_a * norm_b)
+
+
+def recommend(product_id: str, top_n: int = 2) -> list[dict]:
+    """Return up to top_n catalog products most similar to product_id.
+
+    Empty list if the product is unknown or nothing overlaps."""
+    target = db.get_product(product_id)
+    if target is None:
+        return []
+    target_vec = _tokens(target)
+    scored = [
+        (_cosine(target_vec, _tokens(other)), other)
+        for other in db.query_products()
+        if other["id"] != product_id
+    ]
+    scored.sort(key=lambda s: s[0], reverse=True)
+    return [product for score, product in scored[:top_n] if score > 0]
