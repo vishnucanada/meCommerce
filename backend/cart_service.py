@@ -68,3 +68,8 @@ def add_item(cart_id: str, item: CartItemIn):
 def remove_item(cart_id: str, product_id: str):
     _carts.get(cart_id, {}).pop(product_id, None)
     return _render(cart_id)
+
+
+def clear_cart(cart_id: str) -> None:
+    """Empty a cart. Called by the Order Service once checkout succeeds."""
+    _carts.pop(cart_id, None)
