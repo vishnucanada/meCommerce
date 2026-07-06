@@ -21,7 +21,10 @@ service box in `mock-diagram.png`:
 |-------------------------------|----------------------------|-----------|
 | `frontend/`                   | Frontend (Web)             | Static `index.html`; calls `/api/*` via `fetch()` |
 | `backend/product_service.py`  | Product Service            | `GET /api/products`, `GET /api/products/{id}` |
+| `backend/recommendation_service.py` | Recommendation Service | `GET /api/recommendations/{product_id}` |
 | `backend/cart_service.py`     | Cart Service               | `GET/POST /api/cart/{cart_id}`, item add/remove |
+| `backend/order_service.py`    | Order Service              | `POST /api/orders` (checkout), `GET /api/orders/{id}` |
+| `backend/payment_service.py`  | Payment Service            | `POST /api/payments` (mock authorize/capture) |
 | `userAuth/auth_service.py`    | User Auth (AuthN)          | `POST /api/users` (add user), `GET /api/users` |
 | `backend/main.py`             | API Gateway + Web Server   | Mounts the routers and serves the frontend |
 

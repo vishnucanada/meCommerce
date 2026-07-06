@@ -21,6 +21,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from backend.cart_service import router as cart_router
+from backend.order_service import router as orders_router
+from backend.payment_service import router as payments_router
 from backend.product_service import router as products_router
 from backend.recommendation_service import router as recommendations_router
 from database import db
@@ -52,6 +54,8 @@ app.include_router(products_router)         # Product Service
 app.include_router(cart_router)             # Cart Service
 app.include_router(users_router)            # AuthN Service (add user)
 app.include_router(recommendations_router)  # Recommendation Service
+app.include_router(payments_router)         # Payment Service
+app.include_router(orders_router)           # Order Service
 
 
 @app.get("/api/health")
