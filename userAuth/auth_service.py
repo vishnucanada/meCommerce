@@ -17,17 +17,24 @@ add_user(). The request/response contract stays the same, so the frontend
 doesn't change.
 """
 import hashlib
+import hmac
 import os
 import sqlite3
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 from database import db
+from userAuth import tokens
 
 router = APIRouter(prefix="/api/users", tags=["users"])
+
+# Login lives at /api/login (its own box in the diagram's AuthN service), so it
+# gets its own router rather than hanging off the /api/users prefix.
+auth_router = APIRouter(prefix="/api", tags=["auth"])
 
 PBKDF2_ROUNDS = 100_000
 
