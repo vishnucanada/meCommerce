@@ -119,3 +119,73 @@ def list_users():
     """Demo/debug endpoint so you can see stored users. Remove or protect this
     once real auth is in place."""
     return [PublicUser(**u) for u in db.list_users()]
+
+
+# --- Login + sessions ----------------------------------------------------
+class Credentials(BaseModel):
+    """Login payload — same shape as registration."""
+    username: str
+    password: str
+
+
+class Session(BaseModel):
+    """What login returns: a bearer token and the public user it belongs to."""
+    token: str
+    user: PublicUser
+
+
+def _public(user: dict) -> PublicUser:
+    return PublicUser(id=user["id"], username=user["username"],
+                      created_at=user["created_at"])
+
+
+@auth_router.post("/login", response_model=Session)
+def login(payload: Credentials):
+    """Verify credentials and issue a signed session token.
+
+    Returns the same 401 whether the username is unknown or the password is
+    wrong, so the endpoint doesn't reveal which usernames exist."""
+    user = db.get_user_by_username(payload.username)
+    if user is None or not verify_password(payload.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    token = tokens.encode({"sub": user["username"]})
+    return Session(token=token, user=_public(user))
+
+
+# HTTPBearer parses the `Authorization: Bearer <token>` header. auto_error=False
+# lets a route stay open to guests (it yields None instead of raising 403).
+_bearer = HTTPBearer(auto_error=True)
+_bearer_optional = HTTPBearer(auto_error=False)
+
+
+def current_user(
+    creds: HTTPAuthorizationCredentials = Depends(_bearer),
+) -> PublicUser:
+    """FastAPI dependency: require a valid token, resolve it to a user."""
+    try:
+        claims = tokens.decode(creds.credentials)
+    except tokens.TokenError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+    user = db.get_user_by_username(claims.get("sub", ""))
+    if user is None:
+        raise HTTPException(status_code=401, detail="Unknown user")
+    return _public(user)
+
+
+def optional_user(
+    creds: HTTPAuthorizationCredentials | None = Depends(_bearer_optional),
+) -> PublicUser | None:
+    """Like current_user, but returns None (instead of 401) when no valid token
+    is present — for routes that work for guests and logged-in users alike."""
+    if creds is None:
+        return None
+    try:
+        return current_user(creds)
+    except HTTPException:
+        return None
+
+
+@router.get("/me", response_model=PublicUser)
+def me(user: PublicUser = Depends(current_user)):
+    """Return the user the caller's token belongs to (whoami)."""
+    return user

@@ -27,7 +27,7 @@ from backend.product_service import router as products_router
 from backend.recommendation_service import router as recommendations_router
 from database import db
 from userAuth import auth_service
-from userAuth.auth_service import router as users_router
+from userAuth.auth_service import auth_router, router as users_router
 
 
 @asynccontextmanager
