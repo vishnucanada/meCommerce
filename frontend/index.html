@@ -679,43 +679,113 @@
   document.getElementById('closeCart').addEventListener('click', closeCart);
   scrim.addEventListener('click', closeCart);
 
-  // ---- Auth modal (AuthN service: POST /api/users) -----------------------
+  // ---- Auth: register + login + session (AuthN service) ------------------
   const authModal = document.getElementById('authModal');
   const authForm = document.getElementById('authForm');
   const authMsg = document.getElementById('authMsg');
   const authSubmit = document.getElementById('authSubmit');
+  const authTitle = document.getElementById('authTitle');
+  const authLede = document.getElementById('authLede');
+  const authSwitchRow = document.getElementById('authSwitchRow');
+  const authSwitchText = document.getElementById('authSwitchText');
+  const authSwitchLink = document.getElementById('authSwitch');
+  const authSignedIn = document.getElementById('authSignedIn');
+  const authWho = document.getElementById('authWho');
+  const accountBtn = document.getElementById('accountBtn');
+
+  let authMode = 'login';   // which form the signed-out view shows: 'login' | 'register'
+
+  function setSession(session) {
+    TOKEN = session.token; USER = session.user;
+    localStorage.setItem('token', TOKEN);
+    localStorage.setItem('user', JSON.stringify(USER));
+    reflectAuth();
+  }
+  function clearSession() {
+    TOKEN = null; USER = null;
+    localStorage.removeItem('token'); localStorage.removeItem('user');
+    reflectAuth();
+  }
+
+  // Sync the account button + modal contents to the current session state.
+  function reflectAuth() {
+    const signedIn = !!(TOKEN && USER);
+    accountBtn.title = signedIn ? `Signed in as ${USER.username}` : 'Sign in';
+    accountBtn.setAttribute('aria-label', accountBtn.title);
+    accountBtn.style.color = signedIn ? 'var(--accent)' : '';
+    authForm.hidden = signedIn;
+    authSwitchRow.hidden = signedIn;
+    authSignedIn.hidden = !signedIn;
+    if (signedIn) {
+      authTitle.textContent = 'Your account';
+      authLede.hidden = true;
+      authWho.textContent = USER.username;
+    } else {
+      authLede.hidden = false;
+      applyMode();
+    }
+  }
+
+  // Retarget the signed-out form between 'login' and 'register'.
+  function applyMode() {
+    const login = authMode === 'login';
+    authTitle.textContent = login ? 'Sign in' : 'Create your account';
+    authLede.textContent = login
+      ? 'Welcome back — sign in to check out faster.'
+      : 'Save your favourite harvests and check out faster.';
+    authSubmit.textContent = login ? 'Sign in' : 'Create account';
+    document.getElementById('f-pass').setAttribute(
+      'autocomplete', login ? 'current-password' : 'new-password');
+    authSwitchText.textContent = login ? 'New here?' : 'Already have an account?';
+    authSwitchLink.textContent = login ? 'Create an account' : 'Sign in';
+  }
+
+  authSwitchLink.addEventListener('click', e => {
+    e.preventDefault();
+    authMode = authMode === 'login' ? 'register' : 'login';
+    authMsg.textContent = ''; authMsg.className = 'form-msg';
+    applyMode();
+    document.getElementById('f-user').focus();
+  });
 
   function openAuth() {
     authMsg.textContent = ''; authMsg.className = 'form-msg';
     authModal.classList.add('open'); authModal.setAttribute('aria-hidden', 'false');
-    document.getElementById('f-user').focus();
+    reflectAuth();
+    if (!(TOKEN && USER)) document.getElementById('f-user').focus();
   }
   function closeAuth() {
     authModal.classList.remove('open'); authModal.setAttribute('aria-hidden', 'true');
   }
-  document.getElementById('accountBtn').addEventListener('click', openAuth);
-  document.getElementById('authClose').addEventListener('click', e => { e.preventDefault(); closeAuth(); });
+  accountBtn.addEventListener('click', openAuth);
   authModal.addEventListener('click', e => { if (e.target === authModal) closeAuth(); });
+  document.getElementById('logoutBtn').addEventListener('click', () => { clearSession(); closeAuth(); });
 
   authForm.addEventListener('submit', async e => {
     e.preventDefault();
     authMsg.textContent = ''; authMsg.className = 'form-msg';
-    authSubmit.disabled = true; authSubmit.textContent = 'Creating…';
+    const login = authMode === 'login';
+    authSubmit.disabled = true;
+    authSubmit.textContent = login ? 'Signing in…' : 'Creating…';
     const payload = {
       username: document.getElementById('f-user').value,
       password: document.getElementById('f-pass').value,
     };
     try {
-      const user = await api('/api/users', { method: 'POST', body: JSON.stringify(payload) });
+      // Registering creates the account, then logs straight into it.
+      if (!login) await api('/api/users', { method: 'POST', body: JSON.stringify(payload) });
+      const session = await api('/api/login', { method: 'POST', body: JSON.stringify(payload) });
+      setSession(session);
       authMsg.className = 'form-msg ok';
-      authMsg.textContent = `Welcome, ${user.username}! Your account is ready.`;
+      authMsg.textContent = `Welcome, ${session.user.username}!`;
       authForm.reset();
-      setTimeout(closeAuth, 1400);
+      setTimeout(closeAuth, 1100);
     } catch (err) {
       authMsg.className = 'form-msg error';
       authMsg.textContent = err.message || 'Something went wrong. Please try again.';
     } finally {
-      authSubmit.disabled = false; authSubmit.textContent = 'Create account';
+      authSubmit.disabled = false;
+      applyMode();  // restore the button label
     }
   });
 
@@ -735,6 +805,7 @@
   });
 
   // ---- Boot ---------------------------------------------------------------
+  reflectAuth();   // restore signed-in state from localStorage
   loadProducts();
   loadCart();
 </script>
