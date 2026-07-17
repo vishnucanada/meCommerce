@@ -68,6 +68,19 @@ def hash_password(password: str, salt: bytes | None = None) -> str:
     return f"{salt.hex()}:{digest.hex()}"
 
 
+def verify_password(password: str, stored: str) -> bool:
+    """Check a plaintext password against a stored 'salt_hex:hash_hex' value.
+
+    Re-derives the hash with the stored salt and compares in constant time, so a
+    wrong password can't be told apart from a right one by timing."""
+    try:
+        salt_hex, _ = stored.split(":")
+        candidate = hash_password(password, bytes.fromhex(salt_hex))
+    except ValueError:
+        return False
+    return hmac.compare_digest(candidate, stored)
+
+
 def _create_user(username: str, password: str) -> dict:
     """Build a user row and insert it. The 'add user' core."""
     user = {
