@@ -470,11 +470,13 @@
   </div>
 </aside>
 
-<!-- Auth modal (registration -> POST /api/users) -->
+<!-- Auth modal (register -> POST /api/users, login -> POST /api/login) -->
 <div class="modal" id="authModal" aria-hidden="true">
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">
-    <h3 class="serif" id="authTitle">Create your account</h3>
-    <p class="lede">Save your favourite harvests and check out faster.</p>
+    <h3 class="serif" id="authTitle">Sign in</h3>
+    <p class="lede" id="authLede">Welcome back — sign in to check out faster.</p>
+
+    <!-- Signed-out: credentials form (login or register, toggled below) -->
     <form id="authForm" novalidate>
       <div class="field">
         <label for="f-user">Username</label>
@@ -482,12 +484,21 @@
       </div>
       <div class="field">
         <label for="f-pass">Password</label>
-        <input id="f-pass" name="password" type="password" autocomplete="new-password" required>
+        <input id="f-pass" name="password" type="password" autocomplete="current-password" required>
       </div>
       <p class="form-msg" id="authMsg" role="status" aria-live="polite"></p>
-      <button type="submit" class="checkout" id="authSubmit">Create account</button>
+      <button type="submit" class="checkout" id="authSubmit">Sign in</button>
     </form>
-    <p class="modal-foot">Already have an account? <a href="#" id="authClose">Close</a></p>
+    <p class="modal-foot" id="authSwitchRow">
+      <span id="authSwitchText">New here?</span>
+      <a href="#" id="authSwitch">Create an account</a>
+    </p>
+
+    <!-- Signed-in: greeting + logout -->
+    <div id="authSignedIn" hidden>
+      <p class="lede">Signed in as <strong id="authWho"></strong>.</p>
+      <button type="button" class="checkout" id="logoutBtn">Sign out</button>
+    </div>
   </div>
 </div>
 
@@ -505,16 +516,20 @@
     localStorage.setItem('cartId', CART_ID);
   }
 
+  // Session: a bearer token from /api/login plus the public user it belongs to.
+  // Both are restored from localStorage so a reload stays signed in.
+  let TOKEN = localStorage.getItem('token');
+  let USER = JSON.parse(localStorage.getItem('user') || 'null');
+
   let products = [];
   let currentFilter = 'all';
   const money = n => '$' + Number(n).toFixed(2);
 
   // ---- Tiny fetch helper --------------------------------------------------
   async function api(path, opts = {}) {
-    const res = await fetch(API_BASE + path, {
-      headers: { 'Content-Type': 'application/json' },
-      ...opts,
-    });
+    const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+    if (TOKEN) headers['Authorization'] = `Bearer ${TOKEN}`;  // sign requests when logged in
+    const res = await fetch(API_BASE + path, { ...opts, headers });
     if (!res.ok) {
       let detail = res.statusText;
       try {

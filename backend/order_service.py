@@ -53,7 +53,7 @@ def create_order(
     order = {
         "id": uuid.uuid4().hex,
         "cart_id": payload.cart_id,
-        "username": payload.username,
+        "username": username,
         "items": cart["items"],
         "subtotal": cart["subtotal"],
         "shipping": cart["shipping"],
