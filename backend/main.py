@@ -53,6 +53,7 @@ app.add_middleware(
 app.include_router(products_router)         # Product Service
 app.include_router(cart_router)             # Cart Service
 app.include_router(users_router)            # AuthN Service (add user)
+app.include_router(auth_router)             # AuthN Service (login / sessions)
 app.include_router(recommendations_router)  # Recommendation Service
 app.include_router(payments_router)         # Payment Service
 app.include_router(orders_router)           # Order Service

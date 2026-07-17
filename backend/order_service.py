@@ -13,11 +13,12 @@ the route contract.
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from backend import cart_service, payment_service
 from database import db
+from userAuth.auth_service import PublicUser, optional_user
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
 
@@ -29,8 +30,18 @@ class CheckoutIn(BaseModel):
 
 
 @router.post("", status_code=201)
-def create_order(payload: CheckoutIn):
-    """Check out a cart: charge it, persist the order, then empty the cart."""
+def create_order(
+    payload: CheckoutIn,
+    user: PublicUser | None = Depends(optional_user),
+):
+    """Check out a cart: charge it, persist the order, then empty the cart.
+
+    If the request carries a valid session token, the order is tied to that
+    authenticated user — the token wins over any client-supplied username, the
+    same way pricing is taken from the server-side cart, not the client. Guests
+    (no token) can still check out with the optional `username`."""
+    username = user.username if user else payload.username
+
     cart = cart_service.get_cart(payload.cart_id)
     if not cart["items"]:
         raise HTTPException(status_code=400, detail="Cart is empty")
